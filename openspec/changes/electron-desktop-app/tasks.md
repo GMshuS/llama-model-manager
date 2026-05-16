@@ -32,8 +32,8 @@
 ## 6. Verify
 
 - [ ] 6.1 Test `npm run build:electron` launches app window with backend running
-- [ ] 6.2 Test API calls work (models list, presets, server control)
-- [ ] 6.3 Test WebSocket connects and receives real-time updates
+- [x] 6.2 Test API calls work (models list, presets, server control)
+- [x] 6.3 Test WebSocket connects and receives real-time updates
 - [ ] 6.4 Test closing window stops Express and cleanly exits
 - [x] 6.5 Test `npm run dev` still works for independent frontend development
 - [ ] 6.6 Test `npm run dist` produces a working installer/exe

@@ -46,5 +46,21 @@
       "contBatching": true,
       "jinja": true
     }
+  },
+  "Qwen3.5-9B-Q4_K_M.gguf": {
+    "presetId": "perf-max",
+    "overrides": {
+      "ngl": 99,
+      "ctx": 32768,
+      "t": 16,
+      "port": 8880,
+      "host": "0.0.0.0",
+      "timeout": 120,
+      "parallel": 1,
+      "batchSize": 2048,
+      "ubatchSize": 512,
+      "contBatching": true,
+      "jinja": true
+    }
   }
 }
