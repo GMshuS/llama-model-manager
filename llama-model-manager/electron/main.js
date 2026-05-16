@@ -42,7 +42,7 @@ function createWindow() {
     show: false,
   })
 
-  mainWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'))
+  mainWindow.loadURL(`http://localhost:${serverPort}`)
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show()
@@ -96,6 +96,7 @@ ipcMain.on('get-server-port', (event) => {
 })
 
 app.on('ready', async () => {
+  Menu.setApplicationMenu(null)
   const port = await startServer()
   createWindow()
   createTray()
