@@ -2,9 +2,11 @@ import { Routes, Route, NavLink } from 'react-router-dom'
 import ModelBrowser from './components/ModelBrowser/ModelBrowser'
 import Dashboard from './components/Dashboard/Dashboard'
 import Settings from './components/Settings/Settings'
+import { DashboardProvider } from './store/dashboard'
 
 export default function App() {
   return (
+    <DashboardProvider>
     <div className="flex h-screen bg-gray-950 text-gray-100">
       <aside className="w-60 flex-shrink-0 border-r border-gray-800 p-4 flex flex-col">
         <h1 className="text-lg font-bold mb-6 text-cyan-400">llama.cpp Manager</h1>
@@ -28,5 +30,6 @@ export default function App() {
         </Routes>
       </main>
     </div>
+    </DashboardProvider>
   )
 }

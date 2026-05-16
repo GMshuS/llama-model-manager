@@ -1,39 +1,13 @@
-import { useState, useEffect, useCallback } from 'react'
-import useWebSocket from '../../hooks/useWebSocket'
+import { useState } from 'react'
+import { useDashboard } from '../../store/dashboard'
 import ServerControl from '../ServerControl/ServerControl'
 import PerformanceMetrics from '../PerformanceMetrics/PerformanceMetrics'
 import LogViewer from '../LogViewer/LogViewer'
 import ChatTest from '../ChatTest/ChatTest'
 
 export default function Dashboard() {
-  const [status, setStatus] = useState({ state: 'stopped', model: null, params: null, metrics: { tokensPerSecond: 0, pid: null } })
-  const [logs, setLogs] = useState([])
+  const { status, logs } = useDashboard()
   const [externalProcesses, setExternalProcesses] = useState([])
-
-  useEffect(() => {
-    fetch('/api/server/status').then(r => r.json()).then(data => {
-      setStatus(prev => ({ ...prev, ...data, metrics: data.metrics || prev.metrics }))
-    })
-  }, [])
-
-  const onMessage = useCallback((msg) => {
-    switch (msg.event) {
-      case 'status':
-        setStatus(prev => ({ ...prev, ...msg.data }))
-        break
-      case 'log':
-        setLogs(prev => {
-          const next = [...prev, { ...msg.data, ts: Date.now() }]
-          return next.length > 1000 ? next.slice(-1000) : next
-        })
-        break
-      case 'metrics':
-        setStatus(prev => ({ ...prev, metrics: msg.data }))
-        break
-    }
-  }, [])
-
-  useWebSocket(onMessage)
 
   const handleStop = async () => {
     await fetch('/api/server/stop', { method: 'POST' })

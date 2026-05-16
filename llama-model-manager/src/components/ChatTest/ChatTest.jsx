@@ -1,9 +1,12 @@
-import { useState } from 'react'
+import { useDashboard } from '../../store/dashboard'
 
 export default function ChatTest({ status }) {
-  const [prompt, setPrompt] = useState('')
-  const [response, setResponse] = useState('')
-  const [sending, setSending] = useState(false)
+  const { chatState, setChatState } = useDashboard()
+  const { prompt, response, sending } = chatState
+
+  const setPrompt = (v) => setChatState(prev => ({ ...prev, prompt: v }))
+  const setSending = (v) => setChatState(prev => ({ ...prev, sending: v }))
+  const setResponse = (v) => setChatState(prev => ({ ...prev, response: v }))
 
   const handleSend = async () => {
     if (!prompt.trim() || sending) return
