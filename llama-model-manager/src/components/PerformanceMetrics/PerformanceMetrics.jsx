@@ -1,14 +1,14 @@
 export default function PerformanceMetrics({ metrics, state }) {
   if (state !== 'running') {
     return (
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 flex items-center justify-center text-gray-600 text-sm">
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 h-full flex items-center justify-center text-gray-600 text-sm">
         服务未运行
       </div>
     )
   }
 
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+    <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 h-full">
       <h3 className="text-sm font-medium text-gray-400 mb-3">性能指标</h3>
       <div className="space-y-3">
         <div>

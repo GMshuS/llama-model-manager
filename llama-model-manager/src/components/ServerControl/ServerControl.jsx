@@ -25,7 +25,7 @@ export default function ServerControl({ status, onStop, onScan, externalProcesse
   }
 
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+    <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 h-full">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-3">
           <span className={`inline-block w-3 h-3 rounded-full ${s.dot}`} />
