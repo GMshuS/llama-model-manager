@@ -1,0 +1,4 @@
+{
+  "modelsDir": "D:\\llama.cpp\\models",
+  "llamaServerExe": "D:\\llama.cpp\\llama-b9082-bin-win-vulkan-x64\\llama-server.exe"
+}

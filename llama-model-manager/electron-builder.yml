@@ -1,0 +1,22 @@
+appId: com.llamamodelmanager.app
+productName: llama-model-manager
+directories:
+  output: release
+  buildResources: assets
+files:
+  - dist/**/*
+  - server/**/*
+  - electron/**/*
+  - package.json
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+extraMetadata:
+  main: electron/main.js

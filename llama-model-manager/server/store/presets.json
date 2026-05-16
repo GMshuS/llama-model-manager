@@ -1,0 +1,36 @@
+[
+  {
+    "id": "perf-max",
+    "name": "性能优先",
+    "params": {
+      "ngl": 99,
+      "ctx": 32768,
+      "t": 16,
+      "port": 8880,
+      "host": "0.0.0.0",
+      "timeout": 120,
+      "parallel": 1,
+      "batchSize": 2048,
+      "ubatchSize": 512,
+      "contBatching": true,
+      "jinja": true
+    }
+  },
+  {
+    "id": "mem-saver",
+    "name": "省内存",
+    "params": {
+      "ngl": 12,
+      "ctx": 8192,
+      "t": 4,
+      "port": 8880,
+      "host": "0.0.0.0",
+      "timeout": 120,
+      "parallel": 1,
+      "batchSize": 512,
+      "ubatchSize": 256,
+      "contBatching": true,
+      "jinja": true
+    }
+  }
+]
