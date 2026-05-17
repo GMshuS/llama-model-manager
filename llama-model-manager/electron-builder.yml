@@ -8,11 +8,20 @@ files:
   - server/**/*
   - electron/**/*
   - package.json
+extraResources:
+  - from: assets
+    to: assets
+    filter:
+      - "*.png"
+      - "*.svg"
+      - "*.ico"
 win:
   target:
     - target: nsis
       arch:
         - x64
+  forceCodeSigning: false
+  icon: assets/tray-icon.ico
 nsis:
   oneClick: false
   perMachine: false

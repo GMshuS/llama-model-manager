@@ -31,9 +31,14 @@ function findFreePort(startPort) {
 }
 
 function createWindow() {
+  const iconPath = app.isPackaged
+    ? path.join(process.resourcesPath, 'assets', 'tray-icon.ico')
+    : path.join(__dirname, '..', 'assets', 'tray-icon.ico')
+
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
+    icon: iconPath,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -57,7 +62,27 @@ function createWindow() {
 }
 
 function createTray() {
-  const icon = nativeImage.createEmpty()
+  let icon = nativeImage.createEmpty()
+  
+  try {
+    const iconPath = app.isPackaged
+      ? path.join(process.resourcesPath, 'assets', 'tray-icon.ico')
+      : path.join(__dirname, '..', 'assets', 'tray-icon.ico')
+    
+    console.log('🔍 Tray icon path:', iconPath)
+    console.log('📦 Is packaged:', app.isPackaged)
+    
+    icon = nativeImage.createFromPath(iconPath)
+    
+    if (icon.isEmpty()) {
+      console.warn('⚠️ Icon loaded but is empty')
+    } else {
+      console.log('✅ Icon loaded successfully, size:', icon.getSize())
+    }
+  } catch (err) {
+    console.warn('⚠️ Failed to load tray icon:', err.message)
+  }
+  
   tray = new Tray(icon)
   tray.setToolTip('llama.cpp Model Manager')
 
