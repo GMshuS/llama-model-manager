@@ -33,15 +33,42 @@ class ProcessManager {
       ngl: '-ngl', ctx: '-c', t: '-t', port: '--port', host: '--host',
       timeout: '--timeout', parallel: '--parallel',
       batchSize: '--batch-size', ubatchSize: '--ubatch-size',
+      device: '--device', ctxSize: '--ctx-size',
+      chatTemplate: '--chat-template', cors: '--cors', apiKey: '--api-key',
+      temp: '--temp', flashAttn: '--flash-attn',
+      cacheTypeK: '-ctk', cacheTypeV: '-ctv',
     }
     for (const [key, flag] of Object.entries(map)) {
-      if (params[key] !== undefined && params[key] !== null) {
-        args.push(flag, String(params[key]))
+      const value = params[key]
+      if (value !== undefined && value !== null && value !== '') {
+        args.push(flag, String(value))
       }
     }
     if (params.contBatching) args.push('--cont-batching')
     if (params.jinja) args.push('--jinja')
     return args
+  }
+
+  buildCommandLine(exePath, modelPath, params) {
+    const args = this.buildArgs(modelPath, params)
+    // 构建完整的命令行字符串
+    const parts = [exePath]
+    for (let i = 0; i < args.length; i++) {
+      const arg = args[i]
+      if (arg.startsWith('-')) {
+        // 对于标志参数，直接添加
+        parts.push(arg)
+      } else {
+        // 对于值参数，检查是否需要引号
+        if (arg.includes(' ') || arg.includes('"') || arg.includes("'")) {
+          // 如果包含空格或引号，用双引号包裹
+          parts.push(`"${arg.replace(/"/g, '\\"')}"`)
+        } else {
+          parts.push(arg)
+        }
+      }
+    }
+    return parts.join(' ')
   }
 
   async start(modelPath, modelName, params) {
@@ -55,8 +82,11 @@ class ProcessManager {
     this.broadcast('status', { state: 'starting', model: modelName })
 
     const args = this.buildArgs(modelPath, params)
-
     const exePath = getConfig().llamaServerExe || 'llama-server.exe'
+    
+    // 构建完整的命令行字符串
+    this.currentCommandLine = this.buildCommandLine(exePath, modelPath, params)
+    
     this.process = spawn(exePath, args, {
       windowsHide: false,
     })
@@ -175,6 +205,7 @@ class ProcessManager {
     this.state = 'stopped'
     this.currentModel = null
     this.currentParams = null
+    this.currentCommandLine = null
     this.metrics.pid = null
     this.broadcast('status', { state: 'stopped' })
     this.broadcast('log', { stream: 'stdout', text: 'Server stopped\n' })
@@ -187,6 +218,7 @@ class ProcessManager {
       model: this.currentModel,
       params: this.currentParams,
       metrics: this.metrics,
+      commandLine: this.currentCommandLine,
     }
   }
 }

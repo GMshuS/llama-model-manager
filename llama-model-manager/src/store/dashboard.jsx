@@ -6,6 +6,7 @@ const DashboardContext = createContext(null)
 export function DashboardProvider({ children }) {
   const [status, setStatus] = useState({ state: 'stopped', model: null, params: null, metrics: { tokensPerSecond: 0, pid: null } })
   const [logs, setLogs] = useState([])
+  const clearLogs = useCallback(() => setLogs([]), [])
   const [chatState, setChatState] = useState({ prompt: '', response: '', sending: false })
 
   useEffect(() => {
@@ -34,7 +35,7 @@ export function DashboardProvider({ children }) {
   useWebSocket(onMessage)
 
   return (
-    <DashboardContext.Provider value={{ status, logs, chatState, setChatState }}>
+    <DashboardContext.Provider value={{ status, logs, chatState, setChatState, clearLogs }}>
       {children}
     </DashboardContext.Provider>
   )

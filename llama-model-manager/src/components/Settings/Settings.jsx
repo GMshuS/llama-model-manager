@@ -10,6 +10,14 @@ const PARAMS = [
   { key: 'parallel', label: 'Parallel', type: 'number' },
   { key: 'batchSize', label: 'Batch Size', type: 'number' },
   { key: 'ubatchSize', label: 'Ubatch Size', type: 'number' },
+  { key: 'device', label: 'Device', type: 'text' },
+  { key: 'chatTemplate', label: 'Chat Template', type: 'text' },
+  { key: 'cors', label: 'CORS', type: 'text' },
+  { key: 'apiKey', label: 'API Key', type: 'text' },
+  { key: 'temp', label: 'Temperature', type: 'number' },
+  { key: 'flashAttn', label: 'Flash Attention', type: 'select', options: ['on', 'off', 'auto'] },
+  { key: 'cacheTypeK', label: 'Cache Type K', type: 'select', options: ['f32', 'f16', 'bf16', 'q8_0', 'q4_0', 'q4_1', 'iq4_nl', 'q5_0', 'q5_1'] },
+  { key: 'cacheTypeV', label: 'Cache Type V', type: 'select', options: ['f32', 'f16', 'bf16', 'q8_0', 'q4_0', 'q4_1', 'iq4_nl', 'q5_0', 'q5_1'] },
 ]
 
 const BOOLEAN_PARAMS = [
@@ -45,14 +53,48 @@ export default function Settings() {
   }
 
   const handleSave = async () => {
-    await fetch(`/api/presets/${editingId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: editName, params: editParams }),
-    })
-    setEditingId(null)
-    const res = await fetch('/api/presets')
-    setPresets(await res.json())
+    try {
+      console.log('保存预设:', editingId, { name: editName, params: editParams })
+      const response = await fetch(`/api/presets/${editingId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: editName, params: editParams }),
+      })
+      
+      console.log('响应状态:', response.status)
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('保存失败响应:', errorText)
+        throw new Error('保存失败')
+      }
+      
+      const updatedPreset = await response.json()
+      console.log('保存成功:', updatedPreset)
+      
+      // 更新本地状态
+      setPresets(prev => prev.map(p => p.id === editingId ? updatedPreset : p))
+      setEditingId(null)
+      setMsg({ type: 'success', text: '预设已保存' })
+      setTimeout(() => setMsg(null), 3000)
+    } catch (error) {
+      console.error('保存错误:', error)
+      setMsg({ type: 'error', text: error.message })
+      setTimeout(() => setMsg(null), 3000)
+    }
+  }
+
+  const handleRefresh = async () => {
+    try {
+      const res = await fetch('/api/presets')
+      const data = await res.json()
+      setPresets(data)
+      setMsg({ type: 'success', text: '预设列表已刷新' })
+      setTimeout(() => setMsg(null), 3000)
+    } catch (error) {
+      console.error('刷新失败:', error)
+      setMsg({ type: 'error', text: '刷新失败: ' + error.message })
+      setTimeout(() => setMsg(null), 3000)
+    }
   }
 
   const handleDelete = async (id) => {
@@ -136,7 +178,15 @@ export default function Settings() {
         </div>
       </div>
 
-      <h3 className="text-sm font-medium text-gray-400 mb-3">参数预设</h3>
+      <div className="flex justify-between items-center mb-3">
+        <h3 className="text-sm font-medium text-gray-400">参数预设</h3>
+        <button 
+          onClick={handleRefresh}
+          className="px-3 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded-lg text-gray-300"
+        >
+          刷新列表
+        </button>
+      </div>
       <div className="space-y-3">
         {presets.map(preset => (
           <div key={preset.id} className="bg-gray-900 border border-gray-800 rounded-xl p-4">
@@ -149,15 +199,27 @@ export default function Settings() {
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm mb-3"
                 />
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-3">
-                  {PARAMS.map(({ key, label, type }) => (
+                  {PARAMS.map(({ key, label, type, options }) => (
                     <div key={key}>
                       <label className="text-xs text-gray-500 mb-0.5 block">{label}</label>
-                      <input
-                        type={type}
-                        value={editParams[key] ?? ''}
-                        onChange={e => handleParamChange(key, type === 'number' ? Number(e.target.value) : e.target.value)}
-                        className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs"
-                      />
+                      {type === 'select' ? (
+                        <select
+                          value={editParams[key] ?? ''}
+                          onChange={e => handleParamChange(key, e.target.value)}
+                          className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs"
+                        >
+                          {options.map(opt => (
+                            <option key={opt} value={opt}>{opt}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          type={type}
+                          value={editParams[key] ?? ''}
+                          onChange={e => handleParamChange(key, type === 'number' ? Number(e.target.value) : e.target.value)}
+                          className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs"
+                        />
+                      )}
                     </div>
                   ))}
                 </div>

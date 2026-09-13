@@ -1,15 +1,23 @@
 import { useState, useEffect } from 'react'
 
 const PARAMS = [
-  { key: 'ngl', label: 'ngl (GPU Layers)', type: 'number', default: 99, hint: 'Offload layers to GPU' },
-  { key: 'ctx', label: 'Context Size', type: 'number', default: 32768, hint: 'Max context tokens' },
+  { key: 'ngl', label: 'ngl (GPU Layers)', type: 'number', default: 33, hint: 'Offload layers to GPU' },
+  { key: 'ctx', label: 'Context Size', type: 'number', default: 64000, hint: 'Max context tokens' },
   { key: 't', label: 'Threads', type: 'number', default: 8, hint: 'CPU threads' },
   { key: 'port', label: 'Port', type: 'number', default: 8880 },
   { key: 'host', label: 'Host', type: 'text', default: '0.0.0.0' },
-  { key: 'timeout', label: 'Timeout (s)', type: 'number', default: 120 },
+  { key: 'timeout', label: 'Timeout (s)', type: 'number', default: 1200 },
   { key: 'parallel', label: 'Parallel', type: 'number', default: 1 },
   { key: 'batchSize', label: 'Batch Size', type: 'number', default: 1024 },
   { key: 'ubatchSize', label: 'Ubatch Size', type: 'number', default: 512 },
+  { key: 'device', label: 'Device', type: 'text', default: '', hint: 'e.g., Vulkan0' },
+  { key: 'chatTemplate', label: 'Chat Template', type: 'text', default: 'auto', hint: 'e.g., auto, llama3' },
+  { key: 'cors', label: 'CORS', type: 'text', default: '', hint: 'CORS origin' },
+  { key: 'apiKey', label: 'API Key', type: 'text', default: '', hint: 'Custom API key' },
+  { key: 'temp', label: 'Temperature', type: 'number', default: 0.7, hint: 'Sampling temperature' },
+  { key: 'flashAttn', label: 'Flash Attention', type: 'select', default: 'on', options: ['on', 'off', 'auto'] },
+  { key: 'cacheTypeK', label: 'Cache Type K', type: 'select', default: 'q4_0', options: ['f32', 'f16', 'bf16', 'q8_0', 'q4_0', 'q4_1', 'iq4_nl', 'q5_0', 'q5_1'] },
+  { key: 'cacheTypeV', label: 'Cache Type V', type: 'select', default: 'q4_0', options: ['f32', 'f16', 'bf16', 'q8_0', 'q4_0', 'q4_1', 'iq4_nl', 'q5_0', 'q5_1'] },
 ]
 
 const BOOLEAN_PARAMS = [
@@ -31,7 +39,8 @@ export default function ParamConfigModal({ model, onStart, onClose }) {
         setPresets(data)
         if (data.length > 0) {
           setSelectedPresetId(data[0].id)
-          setParams({ ...data[0].params })
+          const defaultParams = Object.fromEntries(PARAMS.map(p => [p.key, p.default]))
+          setParams({ ...defaultParams, ...data[0].params })
         }
       })
   }, [])
@@ -39,7 +48,10 @@ export default function ParamConfigModal({ model, onStart, onClose }) {
   const handlePresetChange = (id) => {
     setSelectedPresetId(id)
     const preset = presets.find(p => p.id === id)
-    if (preset) setParams({ ...preset.params })
+    if (preset) {
+      const defaultParams = Object.fromEntries(PARAMS.map(p => [p.key, p.default]))
+      setParams({ ...defaultParams, ...preset.params })
+    }
   }
 
   const handleParamChange = (key, value) => {
@@ -99,16 +111,28 @@ export default function ParamConfigModal({ model, onStart, onClose }) {
           </select>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          {PARAMS.map(({ key, label, type, hint }) => (
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+          {PARAMS.map(({ key, label, type, hint, options, default: defaultValue }) => (
             <div key={key}>
               <label className="text-xs text-gray-400 mb-1 block">{label}</label>
-              <input
-                type={type}
-                value={params[key] ?? ''}
-                onChange={e => handleParamChange(key, type === 'number' ? Number(e.target.value) : e.target.value)}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm"
-              />
+              {type === 'select' ? (
+                <select
+                  value={params[key] ?? defaultValue}
+                  onChange={e => handleParamChange(key, e.target.value)}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm"
+                >
+                  {options.map(opt => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  type={type}
+                  value={params[key] ?? ''}
+                  onChange={e => handleParamChange(key, type === 'number' ? Number(e.target.value) : e.target.value)}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm"
+                />
+              )}
               {hint && <p className="text-[10px] text-gray-600 mt-0.5">{hint}</p>}
             </div>
           ))}

@@ -110,6 +110,11 @@ async function startServer() {
     serverPort = await findFreePort(3001)
   }
 
+  // 传递 userData 路径给服务器，用于打包后存储用户数据
+  const userDataPath = app.getPath('userData')
+  process.env.ELECTRON_USER_DATA = userDataPath
+  console.log('📁 Electron userData path:', userDataPath)
+
   const { default: startExpress } = await import('../server/index.js')
   serverInstance = startExpress(serverPort)
 

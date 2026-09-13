@@ -3,7 +3,12 @@ import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const STORE_DIR = join(__dirname, '..', 'store')
+
+// 优先使用 Electron userData 目录（打包后），否则使用开发环境路径
+const STORE_DIR = process.env.ELECTRON_USER_DATA
+  ? join(process.env.ELECTRON_USER_DATA, 'store')
+  : join(__dirname, '..', 'store')
+
 const PRESETS_FILE = join(STORE_DIR, 'presets.json')
 const MODELS_FILE = join(STORE_DIR, 'models.json')
 const CONFIG_FILE = join(STORE_DIR, 'config.json')

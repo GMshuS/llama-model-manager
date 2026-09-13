@@ -35,20 +35,6 @@ export default function ModelBrowser() {
   }
 
   const handleModelClick = async (model) => {
-    const res = await fetch(`/api/models/config/${encodeURIComponent(model.name)}`)
-    const config = await res.json()
-
-    if (config.presetId && Object.keys(config.overrides || {}).length > 0) {
-      const presetsRes = await fetch('/api/presets')
-      const presets = await presetsRes.json()
-      const preset = presets.find(p => p.id === config.presetId)
-      if (preset) {
-        const params = { ...preset.params, ...config.overrides }
-        await handleStart(model, params)
-        return
-      }
-    }
-
     setConfigModel(model)
   }
 
@@ -58,7 +44,10 @@ export default function ModelBrowser() {
 
   return (
     <div>
-      <h2 className="text-xl font-bold mb-4">模型列表</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-bold">模型列表</h2>
+        <p className="text-sm text-gray-500 ml-4">点击具体的模型可以启动，启动后跳转到仪表盘页面查看状态</p>
+      </div>
       {models.length === 0 ? (
         <div className="text-gray-500 text-center py-20 border-2 border-dashed border-gray-800 rounded-xl">
           <p className="text-lg mb-2">暂无模型</p>
