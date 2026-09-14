@@ -33,8 +33,7 @@ class ProcessManager {
       ngl: '-ngl', ctx: '-c', t: '-t', port: '--port', host: '--host',
       timeout: '--timeout', parallel: '--parallel',
       batchSize: '--batch-size', ubatchSize: '--ubatch-size',
-      device: '--device', ctxSize: '--ctx-size',
-      chatTemplate: '--chat-template', cors: '--cors', apiKey: '--api-key',
+      device: '--device', apiKey: '--api-key',
       temp: '--temp', flashAttn: '--flash-attn',
       cacheTypeK: '-ctk', cacheTypeV: '-ctv',
     }
@@ -44,8 +43,20 @@ class ProcessManager {
         args.push(flag, String(value))
       }
     }
-    if (params.contBatching) args.push('--cont-batching')
-    if (params.jinja) args.push('--jinja')
+    // 解析并追加自定义参数
+    if (params.customArgs && params.customArgs.trim()) {
+      const custom = params.customArgs.trim()
+      // 简单解析：按空格分割，但保留引号内的内容
+      const regex = /([^\s"']+|"[^"]*"|'[^']*')+/g
+      const matches = custom.match(regex)
+      if (matches) {
+        for (const match of matches) {
+          // 去除外层引号
+          const arg = match.replace(/^["']|["']$/g, '')
+          args.push(arg)
+        }
+      }
+    }
     return args
   }
 
@@ -79,7 +90,7 @@ class ProcessManager {
     this.state = 'starting'
     this.currentModel = modelName
     this.currentParams = params
-    this.broadcast('status', { state: 'starting', model: modelName })
+    this.broadcast('status', { state: 'starting', model: modelName, params })
 
     const args = this.buildArgs(modelPath, params)
     const exePath = getConfig().llamaServerExe || 'llama-server.exe'
@@ -159,7 +170,7 @@ class ProcessManager {
         const res = await fetch(`http://127.0.0.1:${port}/health`)
         if (res.ok && this.state === 'starting') {
           this.state = 'running'
-          this.broadcast('status', { state: 'running', model: this.currentModel })
+          this.broadcast('status', { state: 'running', model: this.currentModel, params: this.currentParams })
           this.broadcast('log', { stream: 'stdout', text: `Server ready on port ${port}\n` })
           clearInterval(this.healthInterval)
           this.healthInterval = null

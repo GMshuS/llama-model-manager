@@ -64,7 +64,7 @@ export default function ModelBrowser() {
               {model.running && (
                 <span className="absolute top-2 right-2 px-2 py-0.5 text-xs bg-cyan-500/20 text-cyan-400 rounded-full">运行中</span>
               )}
-              <h3 className="font-medium truncate mb-2">{model.name}</h3>
+              <h3 className="font-medium max-w-full overflow-hidden text-ellipsis mb-2" title={model.name}>{model.name}</h3>
               <div className="flex gap-3 text-sm text-gray-400">
                 <span>{model.sizeFormatted}</span>
                 <span className="text-cyan-600">{model.quantization}</span>

@@ -1,29 +1,36 @@
 import { useState, useEffect } from 'react'
 
 const PARAMS = [
-  { key: 'ngl', label: 'ngl (GPU Layers)', type: 'number' },
-  { key: 'ctx', label: 'Context Size', type: 'number' },
-  { key: 't', label: 'Threads', type: 'number' },
-  { key: 'port', label: 'Port', type: 'number' },
-  { key: 'host', label: 'Host', type: 'text' },
-  { key: 'timeout', label: 'Timeout (s)', type: 'number' },
-  { key: 'parallel', label: 'Parallel', type: 'number' },
-  { key: 'batchSize', label: 'Batch Size', type: 'number' },
-  { key: 'ubatchSize', label: 'Ubatch Size', type: 'number' },
-  { key: 'device', label: 'Device', type: 'text' },
-  { key: 'chatTemplate', label: 'Chat Template', type: 'text' },
-  { key: 'cors', label: 'CORS', type: 'text' },
-  { key: 'apiKey', label: 'API Key', type: 'text' },
-  { key: 'temp', label: 'Temperature', type: 'number' },
-  { key: 'flashAttn', label: 'Flash Attention', type: 'select', options: ['on', 'off', 'auto'] },
-  { key: 'cacheTypeK', label: 'Cache Type K', type: 'select', options: ['f32', 'f16', 'bf16', 'q8_0', 'q4_0', 'q4_1', 'iq4_nl', 'q5_0', 'q5_1'] },
-  { key: 'cacheTypeV', label: 'Cache Type V', type: 'select', options: ['f32', 'f16', 'bf16', 'q8_0', 'q4_0', 'q4_1', 'iq4_nl', 'q5_0', 'q5_1'] },
+  { key: 'ngl', label: '-ngl', type: 'number' },
+  { key: 'ctx', label: '-c', type: 'number' },
+  { key: 't', label: '-t', type: 'number' },
+  { key: 'port', label: '--port', type: 'number' },
+  { key: 'host', label: '--host', type: 'text' },
+  { key: 'timeout', label: '--timeout', type: 'number' },
+  { key: 'parallel', label: '--parallel', type: 'number' },
+  { key: 'batchSize', label: '--batch-size', type: 'number' },
+  { key: 'ubatchSize', label: '--ubatch-size', type: 'number' },
+  { key: 'device', label: '--device', type: 'text' },
+  { key: 'apiKey', label: '--api-key', type: 'text' },
+  { key: 'temp', label: '--temp', type: 'number' },
+  { key: 'flashAttn', label: '--flash-attn', type: 'select', options: ['on', 'off', 'auto'] },
+  { key: 'cacheTypeK', label: '-ctk', type: 'select', options: ['f32', 'f16', 'bf16', 'q8_0', 'q4_0', 'q4_1', 'iq4_nl', 'q5_0', 'q5_1'] },
+  { key: 'cacheTypeV', label: '-ctv', type: 'select', options: ['f32', 'f16', 'bf16', 'q8_0', 'q4_0', 'q4_1', 'iq4_nl', 'q5_0', 'q5_1'] },
+  { key: 'customArgs', label: '自定义参数', type: 'textarea', hint: '追加到启动参数末尾，支持引号包裹的值' },
 ]
 
-const BOOLEAN_PARAMS = [
-  { key: 'contBatching', label: 'Continuous Batching' },
-  { key: 'jinja', label: 'Jinja Templates' },
-]
+const BOOLEAN_PARAMS = []
+
+// 内部键名到实际参数名的映射
+const PARAM_KEY_TO_FLAG = {
+  ngl: '-ngl', ctx: '-c', t: '-t', port: '--port', host: '--host',
+  timeout: '--timeout', parallel: '--parallel',
+  batchSize: '--batch-size', ubatchSize: '--ubatch-size',
+  device: '--device', apiKey: '--api-key',
+  temp: '--temp', flashAttn: '--flash-attn',
+  cacheTypeK: '-ctk', cacheTypeV: '-ctv',
+  customArgs: '自定义参数',
+}
 
 export default function Settings() {
   const [presets, setPresets] = useState([])
@@ -52,14 +59,34 @@ export default function Settings() {
     setEditParams({ ...preset.params })
   }
 
+  const startNewPreset = () => {
+    setEditingId('new')
+    setEditName('')
+    const defaultParams = Object.fromEntries(PARAMS.map(p => [p.key, p.default ?? '']))
+    setEditParams({ ...defaultParams })
+  }
+
+  const cancelEdit = () => {
+    setEditingId(null)
+  }
+
   const handleSave = async () => {
     try {
       console.log('保存预设:', editingId, { name: editName, params: editParams })
-      const response = await fetch(`/api/presets/${editingId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: editName, params: editParams }),
-      })
+      let response
+      if (editingId === 'new') {
+        response = await fetch('/api/presets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: editName, params: editParams }),
+        })
+      } else {
+        response = await fetch(`/api/presets/${editingId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: editName, params: editParams }),
+        })
+      }
       
       console.log('响应状态:', response.status)
       if (!response.ok) {
@@ -72,7 +99,11 @@ export default function Settings() {
       console.log('保存成功:', updatedPreset)
       
       // 更新本地状态
-      setPresets(prev => prev.map(p => p.id === editingId ? updatedPreset : p))
+      if (editingId === 'new') {
+        setPresets(prev => [...prev, updatedPreset])
+      } else {
+        setPresets(prev => prev.map(p => p.id === editingId ? updatedPreset : p))
+      }
       setEditingId(null)
       setMsg({ type: 'success', text: '预设已保存' })
       setTimeout(() => setMsg(null), 3000)
@@ -141,6 +172,39 @@ export default function Settings() {
     setTimeout(() => setMsg(null), 3000)
   }
 
+  // 渲染参数输入组件
+  const renderParamInput = ({ key, label, type, options, hint }) => (
+    <div key={key}>
+      <label className="text-xs text-gray-500 mb-0.5 block">{label}</label>
+      {type === 'textarea' ? (
+        <textarea
+          value={editParams[key] ?? ''}
+          onChange={e => handleParamChange(key, e.target.value)}
+          className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs h-20 resize-none"
+          rows={4}
+          placeholder={hint}
+        />
+      ) : type === 'select' ? (
+        <select
+          value={editParams[key] ?? ''}
+          onChange={e => handleParamChange(key, e.target.value)}
+          className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs"
+        >
+          {options.map(opt => (
+            <option key={opt} value={opt}>{opt}</option>
+          ))}
+        </select>
+      ) : (
+        <input
+          type={type}
+          value={editParams[key] ?? ''}
+          onChange={e => handleParamChange(key, type === 'number' ? Number(e.target.value) : e.target.value)}
+          className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs"
+        />
+      )}
+    </div>
+  )
+
   return (
     <div>
       <h2 className="text-xl font-bold mb-6">设置</h2>
@@ -180,13 +244,60 @@ export default function Settings() {
 
       <div className="flex justify-between items-center mb-3">
         <h3 className="text-sm font-medium text-gray-400">参数预设</h3>
-        <button 
-          onClick={handleRefresh}
-          className="px-3 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded-lg text-gray-300"
-        >
-          刷新列表
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={startNewPreset}
+            className="px-3 py-1 text-xs bg-cyan-600 hover:bg-cyan-500 rounded-lg text-white"
+          >
+            + 新增预设
+          </button>
+          <button
+            onClick={handleRefresh}
+            className="px-3 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded-lg text-gray-300"
+          >
+            刷新列表
+          </button>
+        </div>
       </div>
+      {/* 新建预设表单 - 在列表之前渲染 */}
+      {editingId === 'new' && (
+        <div key="new-preset" className="bg-gray-900 border border-gray-800 rounded-xl p-4 mb-3">
+          <input
+            type="text"
+            value={editName}
+            onChange={e => setEditName(e.target.value)}
+            placeholder="预设名称"
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm mb-3"
+            autoFocus
+          />
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-3">
+            {PARAMS.filter(p => p.key !== 'customArgs').map(p => renderParamInput(p))}
+          </div>
+          {/* 自定义参数独占一行 */}
+          <div className="mb-3">
+            <label className="text-xs text-gray-500 mb-0.5 block">自定义参数</label>
+            <textarea
+              value={editParams.customArgs ?? ''}
+              onChange={e => handleParamChange('customArgs', e.target.value)}
+              className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs h-20 resize-none"
+              rows={4}
+              placeholder="追加到启动参数末尾，支持引号包裹的值"
+            />
+          </div>
+          <div className="flex gap-3 mb-3">
+            {BOOLEAN_PARAMS.map(({ key, label }) => (
+              <label key={key} className="flex items-center gap-1.5 text-xs cursor-pointer">
+                <input type="checkbox" checked={!!editParams[key]} onChange={() => handleBoolChange(key)} className="accent-cyan-500" />
+                {label}
+              </label>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <button onClick={handleSave} className="px-4 py-1.5 bg-cyan-600 hover:bg-cyan-500 rounded-lg text-sm">保存</button>
+            <button onClick={cancelEdit} className="px-4 py-1.5 text-sm text-gray-400 hover:text-white">取消</button>
+          </div>
+        </div>
+      )}
       <div className="space-y-3">
         {presets.map(preset => (
           <div key={preset.id} className="bg-gray-900 border border-gray-800 rounded-xl p-4">
@@ -199,29 +310,18 @@ export default function Settings() {
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm mb-3"
                 />
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-3">
-                  {PARAMS.map(({ key, label, type, options }) => (
-                    <div key={key}>
-                      <label className="text-xs text-gray-500 mb-0.5 block">{label}</label>
-                      {type === 'select' ? (
-                        <select
-                          value={editParams[key] ?? ''}
-                          onChange={e => handleParamChange(key, e.target.value)}
-                          className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs"
-                        >
-                          {options.map(opt => (
-                            <option key={opt} value={opt}>{opt}</option>
-                          ))}
-                        </select>
-                      ) : (
-                        <input
-                          type={type}
-                          value={editParams[key] ?? ''}
-                          onChange={e => handleParamChange(key, type === 'number' ? Number(e.target.value) : e.target.value)}
-                          className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs"
-                        />
-                      )}
-                    </div>
-                  ))}
+                  {PARAMS.filter(p => p.key !== 'customArgs').map(p => renderParamInput(p))}
+                </div>
+                {/* 自定义参数独占一行 */}
+                <div className="mb-3">
+                  <label className="text-xs text-gray-500 mb-0.5 block">自定义参数</label>
+                  <textarea
+                    value={editParams.customArgs ?? ''}
+                    onChange={e => handleParamChange('customArgs', e.target.value)}
+                    className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs h-20 resize-none"
+                    rows={4}
+                    placeholder="追加到启动参数末尾，支持引号包裹的值"
+                  />
                 </div>
                 <div className="flex gap-3 mb-3">
                   {BOOLEAN_PARAMS.map(({ key, label }) => (
@@ -246,9 +346,11 @@ export default function Settings() {
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
-                  {Object.entries(preset.params).map(([k, v]) => (
-                    <span key={k}><span className="text-gray-600">{k}:</span> {String(v)}</span>
-                  ))}
+                  {Object.entries(preset.params).map(([k, v]) => {
+                    const flag = PARAM_KEY_TO_FLAG[k] || k
+                    if (k === 'customArgs' && !v) return null
+                    return <span key={k}><span className="text-gray-600">{k === 'customArgs' ? '自定义参数' : flag}:</span> {String(v)}</span>
+                  })}
                 </div>
               </div>
             )}

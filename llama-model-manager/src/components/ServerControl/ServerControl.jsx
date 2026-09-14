@@ -77,18 +77,13 @@ export default function ServerControl({ status, onStop, onScan, externalProcesse
         )}
       </div>
 
-      {status.state === 'running' && status.params && (
-        <div className="mt-3">
-          <div className="flex flex-wrap gap-4 text-xs text-gray-500 mb-2">
-            <span>Port: {status.params.port || 8880}</span>
-            <span>PID: {status.metrics?.pid || '-'}</span>
-          </div>
-        </div>
-      )}
-
       {status.state === 'running' && status.commandLine && (
         <div className="mt-3">
-          <div className="text-xs text-gray-400 mb-1">完整启动参数</div>
+          <div className="flex flex-wrap gap-4 text-xs text-gray-500 mb-2">
+            <span>Port: {status.params?.port || 8880}</span>
+            <span>PID: {status.metrics?.pid || '-'}</span>
+          </div>
+          <div className="text-xs text-gray-400 mb-1">完整启动命令</div>
           <div className="bg-gray-800 border border-gray-700 rounded-lg p-3">
             <div className="font-mono text-xs text-gray-300 break-all">
               {status.commandLine}
