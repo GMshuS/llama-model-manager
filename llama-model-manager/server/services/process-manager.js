@@ -90,7 +90,7 @@ class ProcessManager {
     this.state = 'starting'
     this.currentModel = modelName
     this.currentParams = params
-    this.broadcast('status', { state: 'starting', model: modelName, params })
+    this.broadcast('status', { state: 'starting', model: modelName, params, commandLine: this.currentCommandLine })
 
     const args = this.buildArgs(modelPath, params)
     const exePath = getConfig().llamaServerExe || 'llama-server.exe'
@@ -122,7 +122,7 @@ class ProcessManager {
       this.currentParams = null
       this.metrics.pid = null
       this.clearIntervals()
-      this.broadcast('status', { state: 'stopped', exitCode: code })
+      this.broadcast('status', { state: 'stopped', exitCode: code, commandLine: null })
       this.broadcast('log', { stream: 'stdout', text: `Process exited with code ${code}\n` })
     })
 
@@ -132,7 +132,7 @@ class ProcessManager {
       this.currentParams = null
       this.metrics.pid = null
       this.clearIntervals()
-      this.broadcast('status', { state: 'error', error: err.message })
+      this.broadcast('status', { state: 'error', error: err.message, commandLine: null })
       this.broadcast('log', { stream: 'stderr', text: `Error: ${err.message}\n` })
     })
 
@@ -167,10 +167,10 @@ class ProcessManager {
       attempts++
       try {
         const port = this.currentParams?.port || 8880
-        const res = await fetch(`http://127.0.0.1:${port}/health`)
+        const res = await fetch(`http://127.0.1:${port}/health`)
         if (res.ok && this.state === 'starting') {
           this.state = 'running'
-          this.broadcast('status', { state: 'running', model: this.currentModel, params: this.currentParams })
+          this.broadcast('status', { state: 'running', model: this.currentModel, params: this.currentParams, commandLine: this.currentCommandLine })
           this.broadcast('log', { stream: 'stdout', text: `Server ready on port ${port}\n` })
           clearInterval(this.healthInterval)
           this.healthInterval = null
@@ -180,7 +180,7 @@ class ProcessManager {
           this.state = 'error'
           this.currentModel = null
           this.currentParams = null
-          this.broadcast('status', { state: 'error', error: '启动超时' })
+          this.broadcast('status', { state: 'error', error: '启动超时', commandLine: null })
           this.broadcast('log', { stream: 'stderr', text: 'Error: 启动超时 (60s)\n' })
           this.stop()
         }
@@ -218,7 +218,7 @@ class ProcessManager {
     this.currentParams = null
     this.currentCommandLine = null
     this.metrics.pid = null
-    this.broadcast('status', { state: 'stopped' })
+    this.broadcast('status', { state: 'stopped', commandLine: null })
     this.broadcast('log', { stream: 'stdout', text: 'Server stopped\n' })
     this.process = null
   }
