@@ -1,11 +1,15 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import ParamConfigModal from '../ParamConfig/ParamConfig'
+import ModelCard from './ModelCard'
+import ModelDetailModal from './ModelDetailModal'
 
 export default function ModelBrowser() {
   const [models, setModels] = useState([])
   const [loading, setLoading] = useState(true)
   const [configModel, setConfigModel] = useState(null)
+  const [detailModel, setDetailModel] = useState(null)
+  const [modelNotes, setModelNotes] = useState({})
   const navigate = useNavigate()
 
   const fetchModels = async () => {
@@ -13,6 +17,17 @@ export default function ModelBrowser() {
       const res = await fetch('/api/models')
       const data = await res.json()
       setModels(data)
+      
+      // 加载备注信息
+      const notes = {}
+      for (const model of data) {
+        const configRes = await fetch(`/api/models/config/${encodeURIComponent(model.name)}`)
+        const config = await configRes.json()
+        if (config.note) {
+          notes[model.name] = config.note
+        }
+      }
+      setModelNotes(notes)
     } catch { } finally {
       setLoading(false)
     }
@@ -34,8 +49,38 @@ export default function ModelBrowser() {
     navigate('/dashboard')
   }
 
-  const handleModelClick = async (model) => {
+  const handleModelStart = async (model) => {
     setConfigModel(model)
+  }
+
+  const handleShowDetail = (model) => {
+    setDetailModel(model)
+  }
+
+  const handleNoteChange = async (modelName, note) => {
+    try {
+      // 获取当前配置
+      const configRes = await fetch(`/api/models/config/${encodeURIComponent(modelName)}`)
+      const config = await configRes.json()
+      
+      // 更新备注
+      await fetch(`/api/models/config/${encodeURIComponent(modelName)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...config,
+          note: note
+        })
+      })
+      
+      // 更新本地状态
+      setModelNotes(prev => ({
+        ...prev,
+        [modelName]: note
+      }))
+    } catch (err) {
+      console.error('保存备注失败:', err)
+    }
   }
 
   if (loading) {
@@ -46,7 +91,6 @@ export default function ModelBrowser() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-bold">模型列表</h2>
-        <p className="text-sm text-gray-500 ml-4">点击具体的模型可以启动，启动后跳转到仪表盘页面查看状态</p>
       </div>
       {models.length === 0 ? (
         <div className="text-gray-500 text-center py-20 border-2 border-dashed border-gray-800 rounded-xl">
@@ -56,20 +100,14 @@ export default function ModelBrowser() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {models.map(model => (
-            <div
+            <ModelCard
               key={model.name}
-              onClick={() => handleModelClick(model)}
-              className={`relative p-4 rounded-xl border cursor-pointer transition-all hover:border-cyan-500/50 hover:bg-gray-800/50 ${model.running ? 'border-cyan-500 bg-gray-800' : 'border-gray-800 bg-gray-900'}`}
-            >
-              {model.running && (
-                <span className="absolute top-2 right-2 px-2 py-0.5 text-xs bg-cyan-500/20 text-cyan-400 rounded-full">运行中</span>
-              )}
-              <h3 className="font-medium max-w-full overflow-hidden text-ellipsis mb-2" title={model.name}>{model.name}</h3>
-              <div className="flex gap-3 text-sm text-gray-400">
-                <span>{model.sizeFormatted}</span>
-                <span className="text-cyan-600">{model.quantization}</span>
-              </div>
-            </div>
+              model={model}
+              onStart={handleModelStart}
+              onShowDetail={handleShowDetail}
+              note={modelNotes[model.name] || ''}
+              onNoteChange={(note) => handleNoteChange(model.name, note)}
+            />
           ))}
         </div>
       )}
@@ -79,6 +117,13 @@ export default function ModelBrowser() {
           model={configModel}
           onStart={(params) => handleStart(configModel, params)}
           onClose={() => setConfigModel(null)}
+        />
+      )}
+
+      {detailModel && (
+        <ModelDetailModal
+          model={detailModel}
+          onClose={() => setDetailModel(null)}
         />
       )}
     </div>
