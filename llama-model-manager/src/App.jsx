@@ -9,16 +9,16 @@ export default function App() {
     <DashboardProvider>
     <div className="flex h-screen bg-gray-950 text-gray-100">
       <aside className="w-60 flex-shrink-0 border-r border-gray-800 p-4 flex flex-col">
-        <h1 className="text-lg font-bold mb-6 text-cyan-400">llama.cpp Manager</h1>
+        <h1 className="text-lg font-bold mb-6 text-cyan-400">控制面板</h1>
         <nav className="flex flex-col gap-2 flex-1">
           <NavLink to="/" end className={({ isActive }) => `px-3 py-2 rounded-lg transition-colors ${isActive ? 'bg-gray-800 text-cyan-300' : 'hover:bg-gray-800/50'}`}>
-            模型浏览
+            启动模型
           </NavLink>
           <NavLink to="/dashboard" className={({ isActive }) => `px-3 py-2 rounded-lg transition-colors ${isActive ? 'bg-gray-800 text-cyan-300' : 'hover:bg-gray-800/50'}`}>
-            仪表盘
+            启动状态
           </NavLink>
           <NavLink to="/settings" className={({ isActive }) => `px-3 py-2 rounded-lg transition-colors ${isActive ? 'bg-gray-800 text-cyan-300' : 'hover:bg-gray-800/50'}`}>
-            设置
+            设置中心
           </NavLink>
         </nav>
       </aside>

@@ -207,7 +207,7 @@ export default function Settings() {
 
   return (
     <div>
-      <h2 className="text-xl font-bold mb-6">设置</h2>
+      <h2 className="text-xl font-bold mb-6">设置中心</h2>
 
       {msg && (
         <div className={`mb-4 px-4 py-2 rounded-lg text-sm ${msg.type === 'success' ? 'bg-green-900/50 text-green-400 border border-green-800' : 'bg-red-900/50 text-red-400 border border-red-800'}`}>

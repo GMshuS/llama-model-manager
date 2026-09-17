@@ -18,7 +18,7 @@ export default function Dashboard() {
 
   return (
     <div>
-      <h2 className="text-xl font-bold mb-4">仪表盘</h2>
+      <h2 className="text-xl font-bold mb-4">启动状态</h2>
 
       <div className="mb-6">
         <ServerControl status={status} onStop={handleStop} onScan={handleScan} externalProcesses={externalProcesses} />
