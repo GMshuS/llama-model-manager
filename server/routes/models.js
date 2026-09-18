@@ -28,6 +28,53 @@ function formatSize(bytes) {
   return `${(bytes / 1024).toFixed(2)} KB`
 }
 
+// GGUF 量化类型（general.file_type）数字到名称的映射
+// 对应 GGUF 官方 LlamaFileType 枚举，展示名省略冗余的 MOSTLY_ 前缀
+const GGUF_FILE_TYPE_MAP = {
+  0: 'F32',
+  1: 'F16',
+  2: 'Q4_0',
+  3: 'Q4_1',
+  7: 'Q8_0',
+  8: 'Q5_0',
+  9: 'Q5_1',
+  10: 'Q2_K',
+  11: 'Q3_K_S',
+  12: 'Q3_K_M',
+  13: 'Q3_K_L',
+  14: 'Q4_K_S',
+  15: 'Q4_K_M',
+  16: 'Q5_K_S',
+  17: 'Q5_K_M',
+  18: 'Q6_K',
+  19: 'IQ2_XXS',
+  20: 'IQ2_XS',
+  21: 'Q2_K_S',
+  22: 'IQ3_XS',
+  23: 'IQ3_XXS',
+  24: 'IQ1_S',
+  25: 'IQ4_NL',
+  26: 'IQ3_S',
+  27: 'IQ3_M',
+  28: 'IQ2_S',
+  29: 'IQ2_M',
+  30: 'IQ4_XS',
+  31: 'IQ1_M',
+  32: 'BF16',
+  33: 'Q4_0_4_4',
+  34: 'Q4_0_4_8',
+  35: 'Q4_0_8_8',
+  36: 'TQ1_0',
+  37: 'TQ2_0',
+  38: 'MXFP4_MOE'
+}
+
+// 将 general.file_type 数字转换为量化类型名称，未命中映射时回退显示原始数字
+function formatFileType(fileType) {
+  const name = GGUF_FILE_TYPE_MAP[Number(fileType)]
+  return name !== undefined ? name : String(fileType)
+}
+
 router.get('/', (req, res) => {
   try {
     const files = readdirSync(modelsDir)
@@ -93,9 +140,9 @@ router.get('/detail/:name', (req, res) => {
     })
     
     // 调试：输出原始dump内容到控制台
-    console.log('=== GGUF-DUMP OUTPUT ===')
-    console.log(dumpOutput)
-    console.log('=== END OUTPUT ===')
+    // console.log('=== GGUF-DUMP OUTPUT ===')
+    // console.log(dumpOutput)
+    // console.log('=== END OUTPUT ===')
     
     // 解析markdown输出
     const details = parseGgufDump(dumpOutput)
@@ -147,7 +194,7 @@ function parseGgufDump(dumpOutput) {
     details.architecture = String(pick('general.architecture'))
   }
   if (pick('general.size_label') !== null) details.size_label = String(pick('general.size_label'))
-  if (pick('general.file_type') !== null) details.file_type = String(pick('general.file_type'))
+  if (pick('general.file_type') !== null) details.file_type = formatFileType(pick('general.file_type'))
   if (pick('general.quantized_by') !== null) details.quantized_by = String(pick('general.quantized_by'))
   
   // 模型网络超参（超参键前缀跟随架构）
@@ -156,8 +203,11 @@ function parseGgufDump(dumpOutput) {
   if (pick(`${arch}.block_count`) !== null) details.block_count = String(pick(`${arch}.block_count`))
   if (pick(`${arch}.embedding_length`) !== null) details.embedding_length = String(pick(`${arch}.embedding_length`))
   if (pick(`${arch}.feed_forward_length`) !== null) details.feed_forward_length = String(pick(`${arch}.feed_forward_length`))
-  if (pick('llama.expert_count') !== null) details.expert_count = String(pick('llama.expert_count'))
-  if (pick('llama.expert_used_count') !== null) details.expert_used_count = String(pick('llama.expert_used_count'))
+  // MoE 专家数：键名前缀随架构变化（如 llama. / gpt-oss. / qwen2moe.），按后缀匹配
+  const expertCount = pickBySuffix(metadata, 'expert_count')
+  if (expertCount !== null) details.expert_count = String(expertCount)
+  const expertUsedCount = pickBySuffix(metadata, 'expert_used_count')
+  if (expertUsedCount !== null) details.expert_used_count = String(expertUsedCount)
   
   // 内置推测加速头
   if (pick('qwen.mtp.num_pred_heads') !== null) details.num_pred_heads = String(pick('qwen.mtp.num_pred_heads'))
@@ -216,6 +266,18 @@ function cleanMarkdownValue(rawValue) {
     return wrapped[1].trim()
   }
   return value
+}
+
+// 按键名后缀在元数据中查找（MoE 专家数键的前缀随架构变化，如 llama. / gpt-oss.）
+// 命中条件：键名等于 suffix，或以 ".suffix" 结尾
+function pickBySuffix(metadata, suffix) {
+  for (const key of Object.keys(metadata)) {
+    if (key === suffix || key.endsWith(`.${suffix}`)) {
+      const value = metadata[key]
+      if (value !== undefined && value !== '') return value
+    }
+  }
+  return null
 }
 
 export default router

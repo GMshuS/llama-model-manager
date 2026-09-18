@@ -84,7 +84,7 @@ function createTray() {
   }
   
   tray = new Tray(icon)
-  tray.setToolTip('llama.cpp Model Manager')
+  tray.setToolTip('llama.cpp Manager')
 
   const contextMenu = Menu.buildFromTemplate([
     { label: '显示窗口', click: () => mainWindow?.show() },

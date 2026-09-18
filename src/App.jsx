@@ -15,7 +15,7 @@ export default function App() {
             模型管理
           </NavLink>
           <NavLink to="/dashboard" className={({ isActive }) => `px-3 py-2 rounded-lg transition-colors ${isActive ? 'bg-gray-800 text-cyan-300' : 'hover:bg-gray-800/50'}`}>
-            启动状态
+            正在运行
           </NavLink>
           <NavLink to="/settings" className={({ isActive }) => `px-3 py-2 rounded-lg transition-colors ${isActive ? 'bg-gray-800 text-cyan-300' : 'hover:bg-gray-800/50'}`}>
             设置中心

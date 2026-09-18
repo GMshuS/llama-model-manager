@@ -10,7 +10,7 @@ const PARAMS = [
   { key: 'parallel', label: '--parallel', type: 'number', default: 1, hint: 'Parallel sequences' },
   { key: 'batchSize', label: '--batch-size', type: 'number', default: 1024, hint: 'Batch size' },
   { key: 'ubatchSize', label: '--ubatch-size', type: 'number', default: 512, hint: 'Micro batch size' },
-  { key: 'device', label: '--device', type: 'text', default: 'Vulkan0', hint: 'Compute device (e.g., Vulkan0, CUDA0)' },
+  { key: 'device', label: '--device', type: 'text', default: '', hint: 'Compute device (e.g., Vulkan0, CUDA0)' },
   { key: 'apiKey', label: '--api-key', type: 'text', default: '', hint: 'API key' },
   { key: 'temp', label: '--temp', type: 'number', default: 0.7, hint: 'Temperature' },
   { key: 'flashAttn', label: '--flash-attn', type: 'select', default: 'on', options: ['on', 'off', 'auto'], hint: 'Flash attention' },

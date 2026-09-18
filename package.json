@@ -1,7 +1,7 @@
 {
   "name": "llama-model-manager",
   "version": "1.0.0",
-  "description": "llama.cpp Model Manager - Desktop Application",
+  "description": "llama.cpp Manager - Desktop Application",
   "author": "llama-model-manager",
   "private": true,
   "type": "module",

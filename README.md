@@ -1,4 +1,4 @@
-# llama.cpp Model Manager
+# llama.cpp Manager
 
 一个集中管理 llama.cpp 模型的桌面应用，基于 Electron + React + Express。
 
