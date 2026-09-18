@@ -177,7 +177,6 @@ function parseGgufDump(dumpOutput) {
     
     // 内置推测加速头
     num_pred_heads: null,
-    num_draft_layers: null,
     
     // 分词器元数据
     tokenizer_model: 'unknown',
@@ -210,8 +209,8 @@ function parseGgufDump(dumpOutput) {
   if (expertUsedCount !== null) details.expert_used_count = String(expertUsedCount)
   
   // 内置推测加速头
-  if (pick('qwen.mtp.num_pred_heads') !== null) details.num_pred_heads = String(pick('qwen.mtp.num_pred_heads'))
-  if (pick('deepseek.spec.num_draft_layers') !== null) details.num_draft_layers = String(pick('deepseek.spec.num_draft_layers'))
+  const mtpHeads = pickBySuffix(metadata, 'nextn_predict_layers')
+  if (mtpHeads !== null && Number(mtpHeads) > 0) details.num_pred_heads = String(mtpHeads)
   
   // 分词器元数据
   if (pick('tokenizer.ggml.model') !== null) details.tokenizer_model = String(pick('tokenizer.ggml.model'))

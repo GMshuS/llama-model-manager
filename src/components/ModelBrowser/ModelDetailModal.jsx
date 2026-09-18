@@ -130,11 +130,6 @@ export default function ModelDetailModal({ model, onClose }) {
             value={details.num_pred_heads ? '是' : '否'}
             description={details.num_pred_heads ? `支持MTP，${details.num_pred_heads}个预测头` : '不支持MTP内置草稿'}
           />
-          <InfoItem 
-            label="Flash支持" 
-            value={details.num_draft_layers ? (details.num_draft_layers > 0 ? 'd-flash/d-spark' : '否') : '否'}
-            description={details.num_draft_layers ? '支持d-flash/d-spark内置草稿' : '不支持d-flash/d-spark内置草稿'}
-          />
         </div>
 
         {/* 分词器元数据 */}
