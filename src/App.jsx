@@ -12,7 +12,7 @@ export default function App() {
         <h1 className="text-lg font-bold mb-6 text-cyan-400">控制面板</h1>
         <nav className="flex flex-col gap-2 flex-1">
           <NavLink to="/" end className={({ isActive }) => `px-3 py-2 rounded-lg transition-colors ${isActive ? 'bg-gray-800 text-cyan-300' : 'hover:bg-gray-800/50'}`}>
-            启动模型
+            模型管理
           </NavLink>
           <NavLink to="/dashboard" className={({ isActive }) => `px-3 py-2 rounded-lg transition-colors ${isActive ? 'bg-gray-800 text-cyan-300' : 'hover:bg-gray-800/50'}`}>
             启动状态

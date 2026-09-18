@@ -84,8 +84,9 @@ router.get('/detail/:name', (req, res) => {
       return res.status(404).json({ error: '模型文件不存在' })
     }
     
-    // 调用gguf-dump获取模型信息，使用JSON格式输出
-    const dumpOutput = execSync(`gguf-dump "${filePath}" --json`, { 
+    // 调用gguf-dump获取模型信息，使用markdown格式输出
+    // --no-tensors：跳过张量列表，加快执行并减少非必要输出
+    const dumpOutput = execSync(`gguf-dump "${filePath}" --no-tensors --markdown`, { 
       encoding: 'utf-8', 
       timeout: 30000,
       env: { ...process.env, PYTHONIOENCODING: 'utf-8' }
@@ -96,16 +97,11 @@ router.get('/detail/:name', (req, res) => {
     console.log(dumpOutput)
     console.log('=== END OUTPUT ===')
     
-    // 解析JSON输出
-    const dumpData = JSON.parse(dumpOutput)
+    // 解析markdown输出
+    const details = parseGgufDump(dumpOutput)
     
-    // 解析dump输出
-    const details = parseGgufDump(dumpData)
-    
-    // 调试：输出解析结果
-    console.log('=== PARSED DETAILS ===')
-    console.log(details)
-    console.log('=== END DETAILS ===')
+    // 将完整的原始输出追加到解析结果之后，方便查看
+    details.raw_output = dumpOutput
     
     res.json(details)
   } catch (err) {
@@ -114,7 +110,8 @@ router.get('/detail/:name', (req, res) => {
   }
 })
 
-function parseGgufDump(dumpData) {
+// 解析 gguf-dump --markdown 输出，提取关键元数据
+function parseGgufDump(dumpOutput) {
   const details = {
     // 文件基础信息
     version: 'unknown',
@@ -140,63 +137,85 @@ function parseGgufDump(dumpData) {
     chat_template: null
   }
   
-  let currentArchPrefix = ''
+  // markdown表格输出解析为 key -> value 映射
+  const metadata = parseMarkdownMetadata(dumpOutput)
+  const pick = (key) => (metadata[key] !== undefined && metadata[key] !== '' ? metadata[key] : null)
   
-  // JSON格式的输出包含metadata字段
-  if (dumpData && dumpData.metadata && typeof dumpData.metadata === 'object') {
-    for (const [key, item] of Object.entries(dumpData.metadata)) {
-      // 提取实际值，item是一个对象，包含value字段
-      const value = item && item.value !== undefined ? item.value : item
-      
-      // 文件基础信息
-      if (key === 'GGUF.version') {
-        details.version = String(value)
-      } else if (key === 'general.architecture') {
-        details.architecture = String(value)
-        currentArchPrefix = String(value)
-      } else if (key === 'general.size_label') {
-        details.size_label = String(value)
-      } else if (key === 'general.file_type') {
-        details.file_type = String(value)
-      } else if (key === 'general.quantized_by') {
-        details.quantized_by = String(value)
-      }
-      
-      // 模型网络超参（前缀随架构变化）
-      else if (key === `${currentArchPrefix}.context_length`) {
-        details.context_length = String(value)
-      } else if (key === `${currentArchPrefix}.block_count`) {
-        details.block_count = String(value)
-      } else if (key === `${currentArchPrefix}.embedding_length`) {
-        details.embedding_length = String(value)
-      } else if (key === `${currentArchPrefix}.feed_forward_length`) {
-        details.feed_forward_length = String(value)
-      } else if (key === 'llama.expert_count') {
-        details.expert_count = String(value)
-      } else if (key === 'llama.expert_used_count') {
-        details.expert_used_count = String(value)
-      }
-      
-      // 内置推测加速头
-      else if (key === 'qwen.mtp.num_pred_heads') {
-        details.num_pred_heads = String(value)
-      } else if (key === 'deepseek.spec.num_draft_layers') {
-        details.num_draft_layers = String(value)
-      }
-      
-      // 分词器元数据
-      else if (key === 'tokenizer.ggml.model') {
-        details.tokenizer_model = String(value)
-      } else if (key === 'tokenizer.chat_template') {
-        // chat_template可能包含多行，需要特殊处理
-        if (value && value !== 'unknown') {
-          details.chat_template = String(value)
-        }
-      }
-    }
+  // 文件基础信息
+  if (pick('GGUF.version') !== null) details.version = String(pick('GGUF.version'))
+  if (pick('general.architecture') !== null) {
+    details.architecture = String(pick('general.architecture'))
   }
+  if (pick('general.size_label') !== null) details.size_label = String(pick('general.size_label'))
+  if (pick('general.file_type') !== null) details.file_type = String(pick('general.file_type'))
+  if (pick('general.quantized_by') !== null) details.quantized_by = String(pick('general.quantized_by'))
+  
+  // 模型网络超参（超参键前缀跟随架构）
+  const arch = metadata['general.architecture'] || ''
+  if (pick(`${arch}.context_length`) !== null) details.context_length = String(pick(`${arch}.context_length`))
+  if (pick(`${arch}.block_count`) !== null) details.block_count = String(pick(`${arch}.block_count`))
+  if (pick(`${arch}.embedding_length`) !== null) details.embedding_length = String(pick(`${arch}.embedding_length`))
+  if (pick(`${arch}.feed_forward_length`) !== null) details.feed_forward_length = String(pick(`${arch}.feed_forward_length`))
+  if (pick('llama.expert_count') !== null) details.expert_count = String(pick('llama.expert_count'))
+  if (pick('llama.expert_used_count') !== null) details.expert_used_count = String(pick('llama.expert_used_count'))
+  
+  // 内置推测加速头
+  if (pick('qwen.mtp.num_pred_heads') !== null) details.num_pred_heads = String(pick('qwen.mtp.num_pred_heads'))
+  if (pick('deepseek.spec.num_draft_layers') !== null) details.num_draft_layers = String(pick('deepseek.spec.num_draft_layers'))
+  
+  // 分词器元数据
+  if (pick('tokenizer.ggml.model') !== null) details.tokenizer_model = String(pick('tokenizer.ggml.model'))
+  if (pick('tokenizer.chat_template') !== null) details.chat_template = String(pick('tokenizer.chat_template'))
   
   return details
+}
+
+// 解析 gguf-dump --markdown 输出中的元数据表格，返回 key -> value 映射
+// 兼容值跨多行（如 tokenizer.chat_template）的情况
+function parseMarkdownMetadata(output) {
+  const metadata = {}
+  if (!output) return metadata
+  
+  const lines = String(output).split(/\r?\n/)
+  const rowStartPattern = /^\|\s*\d+\s*\|/
+  const rows = []
+  let currentRow = null
+  
+  for (const line of lines) {
+    if (rowStartPattern.test(line)) {
+      // 新的一行数据行
+      if (currentRow !== null) rows.push(currentRow)
+      currentRow = line
+    } else if (currentRow !== null) {
+      // 上一行值的续行（多行值），拼接后统一解析
+      currentRow += '\n' + line
+    }
+  }
+  if (currentRow !== null) rows.push(currentRow)
+  
+  for (const row of rows) {
+    // 去掉首尾的表格分隔符，得到各列
+    const cells = row.split('|').slice(1, -1)
+    if (cells.length < 5) continue
+    
+    const key = cells[3].trim()
+    if (!key) continue
+    
+    // 值中可能包含“|”，从第5列起全部作为值
+    metadata[key] = cleanMarkdownValue(cells.slice(4).join('|'))
+  }
+  
+  return metadata
+}
+
+// 去除 markdown 表格值两端的反引号包裹
+function cleanMarkdownValue(rawValue) {
+  const value = String(rawValue).trim()
+  const wrapped = value.match(/^`([\s\S]*)`$/)
+  if (wrapped && !wrapped[1].includes('`')) {
+    return wrapped[1].trim()
+  }
+  return value
 }
 
 export default router

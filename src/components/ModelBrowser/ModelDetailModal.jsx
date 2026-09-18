@@ -156,6 +156,16 @@ export default function ModelDetailModal({ model, onClose }) {
             </div>
           )}
         </div>
+
+        {/* gguf-dump 完整输出 */}
+        {details.raw_output && (
+          <div>
+            <h3 className="text-lg font-semibold mb-3 text-cyan-400">完整输出</h3>
+            <pre className="p-3 bg-gray-800 rounded text-xs text-gray-300 max-h-64 overflow-auto whitespace-pre">
+              {details.raw_output}
+            </pre>
+          </div>
+        )}
       </div>
     )
   }
