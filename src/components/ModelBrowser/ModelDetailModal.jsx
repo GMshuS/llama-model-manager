@@ -180,7 +180,7 @@ export default function ModelDetailModal({ model, onClose }) {
         ) : error ? (
           <div className="text-center py-20">
             <div className="text-red-400 mb-2">{error}</div>
-            <div className="text-sm text-gray-500">请确保gguf-dump已安装并可用</div>
+            <div className="text-sm text-gray-500">请确保gguf-dump已安装并可用，安装命令：pip install gguf</div>
           </div>
         ) : (
           renderDetails()

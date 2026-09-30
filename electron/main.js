@@ -142,16 +142,26 @@ app.on('window-all-closed', () => {
   }
 })
 
-app.on('before-quit', async () => {
-  try {
-    const { processManager } = await import('../server/services/process-manager.js')
-    processManager.stop()
-  } catch {}
+// Electron 不等待 before-quit 的 async 处理器：先 preventDefault 拦下退出流程，
+// 等 stopAll() 真正跑完再自行 app.quit()，否则多实例下只有第一个实例被杀，其余变孤儿进程
+let quitting = false
 
-  if (serverInstance) {
-    serverInstance.close()
-    serverInstance = null
-  }
+app.on('before-quit', (event) => {
+  if (quitting) return
+  event.preventDefault()
+  quitting = true
+  ;(async () => {
+    try {
+      const { processManager } = await import('../server/services/process-manager.js')
+      await processManager.stopAll()
+    } catch {}
+
+    if (serverInstance) {
+      serverInstance.close()
+      serverInstance = null
+    }
+    app.quit()
+  })()
 })
 
 app.on('will-quit', () => {

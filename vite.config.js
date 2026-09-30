@@ -11,4 +11,12 @@ export default defineConfig({
       '/api': 'http://localhost:3001',
     },
   },
+  // vitest 配置：仅对 __tests__ 目录生效，environment 固定 node 以隔离 react/tailwind 插件
+  test: {
+    environment: 'node',
+    include: [
+      'server/**/__tests__/**/*.test.js',
+      'src/**/__tests__/**/*.test.js',
+    ],
+  },
 })

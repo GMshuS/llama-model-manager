@@ -20,6 +20,9 @@ const PARAMS = [
 
 const BOOLEAN_PARAMS = []
 
+// 多实例下 8880 几乎必然撞车：打开弹窗时向 /api/server/ports/free 取一个空闲端口回填
+const DEFAULT_PORT = 8880
+
 export default function ParamConfigModal({ model, onStart, onClose }) {
   const [params, setParams] = useState({})
   const [presets, setPresets] = useState([])
@@ -27,20 +30,49 @@ export default function ParamConfigModal({ model, onStart, onClose }) {
   const [savingPreset, setSavingPreset] = useState(false)
   const [presetName, setPresetName] = useState('')
   const [customArgs, setCustomArgs] = useState('')
+  const [portError, setPortError] = useState('')
 
   useEffect(() => {
-    fetch('/api/presets')
-      .then(r => r.json())
-      .then(data => {
-        setPresets(data)
-        if (data.length > 0) {
-          setSelectedPresetId(data[0].id)
-          const defaultParams = Object.fromEntries(PARAMS.map(p => [p.key, p.default]))
-          setParams({ ...defaultParams, ...data[0].params })
-          // 同步预设的自定义参数
-          setCustomArgs(data[0].params.customArgs ?? '')
-        }
-      })
+    let cancelled = false
+
+    const loadPresets = async () => {
+      const res = await fetch('/api/presets')
+      const data = await res.json()
+      if (cancelled) return
+
+      setPresets(data)
+      if (data.length > 0) {
+        setSelectedPresetId(data[0].id)
+        const defaultParams = Object.fromEntries(PARAMS.map(p => [p.key, p.default]))
+        setParams({ ...defaultParams, ...data[0].params })
+        // 同步预设的自定义参数
+        setCustomArgs(data[0].params.customArgs ?? '')
+      }
+
+      // 只在端口仍是默认值 / 未设置时回填，避免覆盖预设里显式指定的端口
+      try {
+        const portRes = await fetch('/api/server/ports/free')
+        const portData = await portRes.json()
+        const freePort = Number(portData?.port)
+        if (cancelled || !Number.isInteger(freePort) || freePort <= 0) return
+
+        setParams(prev => (
+          prev.port == null || Number(prev.port) === DEFAULT_PORT
+            ? { ...prev, port: freePort }
+            : prev
+        ))
+      } catch {
+        // 拉取失败不阻塞配置：沿用默认端口，真冲突时由启动接口 409 就地提示
+      }
+    }
+
+    loadPresets().catch(err => {
+      console.error('加载预设失败:', err)
+    })
+
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   const handlePresetChange = (id) => {
@@ -51,12 +83,15 @@ export default function ParamConfigModal({ model, onStart, onClose }) {
       setParams({ ...defaultParams, ...preset.params })
       // 同步预设的自定义参数
       setCustomArgs(preset.params.customArgs ?? '')
+      setPortError('')
     }
   }
 
   const handleParamChange = (key, value) => {
     setParams(prev => ({ ...prev, [key]: value }))
     setSelectedPresetId('')
+    // 手改端口即视为已处理上一次的冲突提示
+    if (key === 'port') setPortError('')
   }
 
   const handleBooleanChange = (key) => {
@@ -88,7 +123,19 @@ export default function ParamConfigModal({ model, onStart, onClose }) {
     })
     // 将自定义参数合并到启动参数中
     const startParams = { ...params, customArgs }
-    onStart(startParams)
+    const result = await onStart(startParams)
+
+    // 启动失败时留在弹窗里：端口冲突就地提示，其余错误沿用全局提示
+    if (result && result.ok === false) {
+      if (result.code === 'PORT_IN_USE') {
+        setPortError(`端口 ${result.port ?? params.port} 已被占用，请改用其它端口`)
+        return
+      }
+      alert(`启动失败: ${result.error}`)
+      return
+    }
+
+    setPortError('')
   }
 
   return (
@@ -132,10 +179,17 @@ export default function ParamConfigModal({ model, onStart, onClose }) {
                   type={type}
                   value={params[key] ?? ''}
                   onChange={e => handleParamChange(key, type === 'number' ? Number(e.target.value) : e.target.value)}
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm"
+                  className={`w-full bg-gray-800 border rounded-lg px-3 py-1.5 text-sm ${
+                    key === 'port' && portError ? 'border-red-500' : 'border-gray-700'
+                  }`}
                 />
               )}
-              {hint && <p className="text-[10px] text-gray-600 mt-0.5">{hint}</p>}
+              {/* 端口冲突就地提示（替代 alert），其余参数保持原 hint */}
+              {key === 'port' && portError ? (
+                <p className="text-[10px] text-red-400 mt-0.5">{portError}</p>
+              ) : (
+                hint && <p className="text-[10px] text-gray-600 mt-0.5">{hint}</p>
+              )}
             </div>
           ))}
         </div>

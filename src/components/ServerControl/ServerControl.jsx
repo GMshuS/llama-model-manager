@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import ConfirmDialog from '../ConfirmDialog/ConfirmDialog'
 
 const STATE_MAP = {
   stopped: { label: '已停止', color: 'bg-gray-600', dot: 'bg-gray-400' },
@@ -7,31 +8,41 @@ const STATE_MAP = {
   error: { label: '错误', color: 'bg-red-600', dot: 'bg-red-400' },
 }
 
-export default function ServerControl({ status, onStop, onScan, externalProcesses }) {
-  const [confirmKill, setConfirmKill] = useState(null)
-  const s = STATE_MAP[status.state] || STATE_MAP.stopped
+const DEFAULT_PORT = 8880
 
-  const handleStop = () => {
+export default function ServerControl({ instanceId, status, onStop, externalProcesses }) {
+  // 两条确认链路必须保持独立：① 外部进程终止（原行为）② 停止本实例（本轮新增）
+  const [confirmKill, setConfirmKill] = useState(null)
+  const [confirmStop, setConfirmStop] = useState(false)
+  const s = STATE_MAP[status.state] || STATE_MAP.stopped
+  const modelName = status.modelName || status.model || ''
+  const port = status.port || status.params?.port || DEFAULT_PORT
+
+  const handleStopClick = () => {
     if (externalProcesses && externalProcesses.length > 0) {
       setConfirmKill(externalProcesses)
-    } else {
-      onStop()
+      return
     }
+    setConfirmStop(true)
+  }
+
+  const handleConfirmStop = async () => {
+    setConfirmStop(false)
+    await onStop(instanceId)
   }
 
   const handleConfirmKill = async () => {
-    await onStop()
+    await onStop(instanceId)
     setConfirmKill(null)
   }
 
   const handleTest = () => {
-    const port = status.params?.port || 8880
     window.open(`http://localhost:${port}/`, '_blank')
   }
 
   const handleCopyModelName = () => {
-    if (status.model) {
-      navigator.clipboard.writeText(status.model).then(() => {
+    if (modelName) {
+      navigator.clipboard.writeText(modelName).then(() => {
         alert('模型名称已复制到剪贴板')
       }).catch(err => {
         console.error('复制失败:', err)
@@ -45,9 +56,9 @@ export default function ServerControl({ status, onStop, onScan, externalProcesse
         <div className="flex items-center gap-3">
           <span className={`inline-block w-3 h-3 rounded-full ${s.dot}`} />
           <span className={`px-2 py-0.5 text-xs rounded ${s.color}`}>{s.label}</span>
-          {status.model && (
+          {modelName && (
             <>
-              <span className="text-sm text-gray-300">{status.model}</span>
+              <span className="text-sm text-gray-300">{modelName}</span>
               {status.state === 'running' && (
                 <div className="flex gap-2">
                   <button
@@ -69,7 +80,7 @@ export default function ServerControl({ status, onStop, onScan, externalProcesse
         </div>
         {status.state === 'running' && (
           <button
-            onClick={handleStop}
+            onClick={handleStopClick}
             className="px-4 py-1.5 bg-red-600/20 text-red-400 border border-red-800/50 rounded-lg text-sm hover:bg-red-600/30 transition-colors"
           >
             停止
@@ -80,7 +91,7 @@ export default function ServerControl({ status, onStop, onScan, externalProcesse
       {status.state === 'running' && status.commandLine && (
         <div className="mt-3">
           <div className="flex flex-wrap gap-4 text-xs text-gray-500 mb-2">
-            <span>Port: {status.params?.port || 8880}</span>
+            <span>Port: {port}</span>
             <span>PID: {status.metrics?.pid || '-'}</span>
           </div>
           <div className="text-xs text-gray-400 mb-1">完整启动命令</div>
@@ -92,16 +103,24 @@ export default function ServerControl({ status, onStop, onScan, externalProcesse
         </div>
       )}
 
+      {confirmStop && (
+        <ConfirmDialog
+          title="停止模型"
+          message={modelName ? `确定停止模型 ${modelName} 吗？` : '确定停止该模型吗？'}
+          confirmText="确认停止"
+          onConfirm={handleConfirmStop}
+          onCancel={() => setConfirmStop(false)}
+        />
+      )}
+
       {confirmKill && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 max-w-sm">
-            <p className="mb-4">检测到外部启动的进程，确认终止？</p>
-            <div className="flex gap-3 justify-end">
-              <button onClick={() => setConfirmKill(null)} className="px-4 py-2 text-sm text-gray-400 hover:text-white">取消</button>
-              <button onClick={handleConfirmKill} className="px-4 py-2 bg-red-600 rounded-lg text-sm hover:bg-red-500">确认终止</button>
-            </div>
-          </div>
-        </div>
+        <ConfirmDialog
+          title="终止外部进程"
+          message="检测到外部启动的进程，确认终止？"
+          confirmText="确认终止"
+          onConfirm={handleConfirmKill}
+          onCancel={() => setConfirmKill(null)}
+        />
       )}
     </div>
   )

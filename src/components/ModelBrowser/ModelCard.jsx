@@ -1,6 +1,8 @@
 import { useState, useRef } from 'react'
 
 export default function ModelCard({ model, onStart, onShowDetail, note, onNoteChange }) {
+  // D3：同名模型可重复启动，角标展示运行实例数
+  const runningCount = Number(model.runningCount) || 0
   const [isHovered, setIsHovered] = useState(false)
   const [isEditingNote, setIsEditingNote] = useState(false)
   const [tempNote, setTempNote] = useState(note || '')
@@ -45,15 +47,15 @@ export default function ModelCard({ model, onStart, onShowDetail, note, onNoteCh
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       className={`relative p-4 rounded-xl border transition-all duration-200 ${
-        model.running 
+        runningCount > 0
           ? 'border-cyan-500 bg-gray-800/80' 
           : 'border-gray-800 bg-gray-900/80 hover:border-gray-700'
       }`}
     >
       {/* 运行状态标签 */}
-      {model.running && (
+      {runningCount > 0 && (
         <span className="absolute top-2 right-2 px-2 py-0.5 text-xs bg-cyan-500/20 text-cyan-400 rounded-full">
-          运行中
+          {runningCount > 1 ? `运行中 ×${runningCount}` : '运行中'}
         </span>
       )}
       

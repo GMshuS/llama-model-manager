@@ -75,8 +75,21 @@ function formatFileType(fileType) {
   return name !== undefined ? name : String(fileType)
 }
 
+// D3：同名模型允许重复启动，运行态不再用单字段布尔，改为按实例注册表派生计数
+function countRunningInstances() {
+  const counts = new Map()
+  for (const instance of processManager.getInstances()) {
+    // 与前端 isAlive 口径一致：只有 starting / running 才算「运行中」
+    if (instance.state !== 'running' && instance.state !== 'starting') continue
+    const key = instance.modelName
+    counts.set(key, (counts.get(key) || 0) + 1)
+  }
+  return counts
+}
+
 router.get('/', (req, res) => {
   try {
+    const runningCounts = countRunningInstances()
     const files = readdirSync(modelsDir)
       .filter(f => f.endsWith('.gguf'))
       .map(filename => {
@@ -89,7 +102,7 @@ router.get('/', (req, res) => {
           size: stats.size,
           sizeFormatted: formatSize(stats.size),
           quantization: parseQuantization(filename),
-          running: processManager.currentModel === filename,
+          runningCount: runningCounts.get(filename) || 0,
           presetId: config?.presetId || null,
           overrides: config?.overrides || {},
         }

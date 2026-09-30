@@ -8,10 +8,9 @@ import { fileURLToPath } from 'url'
 import modelsRouter from './routes/models.js'
 import serverRouter from './routes/server.js'
 import presetsRouter from './routes/presets.js'
-import { getPresets, getModelConfig, getConfig, saveConfig } from './store/store.js'
+import { getConfig, saveConfig } from './store/store.js'
 import { processManager } from './services/process-manager.js'
 import { scanPorts } from './services/port-scanner.js'
-import { parseTokensPerSecond, parseMemoryMB } from './services/metrics-parser.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -32,29 +31,6 @@ app.put('/api/config', (req, res) => {
   res.json(getConfig())
 })
 
-app.post('/api/chat', async (req, res) => {
-  const status = processManager.getStatus()
-  if (status.state !== 'running') {
-    return res.status(400).json({ error: '服务未运行' })
-  }
-  const { prompt } = req.body
-  if (!prompt) {
-    return res.status(400).json({ error: 'prompt required' })
-  }
-  try {
-    const port = status.params?.port || 8880
-    const llmRes = await fetch(`http://127.0.0.1:${port}/completion`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, n_predict: 512, stream: false }),
-    })
-    const data = await llmRes.json()
-    res.json({ content: data.content })
-  } catch (err) {
-    res.status(502).json({ error: err.message })
-  }
-})
-
 app.use(express.static(path.join(__dirname, '..', 'dist')))
 
 app.get('/{*path}', (req, res, next) => {
@@ -70,9 +46,10 @@ export default function startExpress(port) {
 
   wss.on('connection', (ws) => {
     wsClients.add(ws)
+    // 握手首包推全量实例数组（D1）：刷新 / 重连后前端 Tab 列表自动还原
     ws.send(JSON.stringify({
-      event: 'status',
-      data: processManager.getStatus(),
+      event: 'instances',
+      data: { instances: processManager.getInstances() },
     }))
 
     ws.on('close', () => {

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useDashboard } from '../../store/dashboard'
 import ParamConfigModal from '../ParamConfig/ParamConfig'
 import ModelCard from './ModelCard'
 import ModelDetailModal from './ModelDetailModal'
@@ -11,6 +12,7 @@ export default function ModelBrowser() {
   const [detailModel, setDetailModel] = useState(null)
   const [modelNotes, setModelNotes] = useState({})
   const navigate = useNavigate()
+  const { setActiveInstance } = useDashboard()
 
   const fetchModels = async () => {
     try {
@@ -35,18 +37,34 @@ export default function ModelBrowser() {
 
   useEffect(() => { fetchModels(); const t = setInterval(fetchModels, 5000); return () => clearInterval(t) }, [])
 
+  // 启动结果要回传给 ParamConfig：PORT_IN_USE 由弹窗就地提示，其余错误沿用 alert
   const handleStart = async (model, params) => {
-    const res = await fetch('/api/server/start', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ modelPath: model.path, modelName: model.name, params }),
-    })
-    if (!res.ok) {
-      const err = await res.json()
-      alert(`启动失败: ${err.error}`)
-      return
+    try {
+      const res = await fetch('/api/server/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ modelPath: model.path, modelName: model.name, params }),
+      })
+      const data = await res.json().catch(() => ({}))
+
+      if (!res.ok) {
+        return {
+          ok: false,
+          code: data?.code || null,
+          port: data?.port ?? null,
+          error: data?.error || `启动失败 (HTTP ${res.status})`,
+        }
+      }
+
+      // 先激活对应 Tab 再跳转，保证落在刚启动的实例上（同名模型多开时尤为重要）
+      if (data?.instanceId) setActiveInstance(data.instanceId)
+      navigate('/dashboard')
+      return { ok: true, instanceId: data?.instanceId || null }
+    } catch (err) {
+      // 网络异常 / 服务端不可达：必须回传失败结果，否则弹窗既不关闭也不提示
+      console.error('[model-browser] 启动请求异常:', err?.message)
+      return { ok: false, code: null, port: null, error: `启动请求失败: ${err?.message || '网络异常'}` }
     }
-    navigate('/dashboard')
   }
 
   const handleModelStart = async (model) => {
